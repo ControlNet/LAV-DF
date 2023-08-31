@@ -16,7 +16,7 @@
         <img src="https://img.shields.io/github/stars/ControlNet/LAV-DF?style=flat-square">
     </a>
     <a href="https://github.com/ControlNet/LAV-DF/blob/master/LICENSE">
-        <img src="https://img.shields.io/github/license/ControlNet/LAV-DF?style=flat-square">
+        <img src="https://img.shields.io/badge/license-CC%20BY--NC%204.0-97ca00?style=flat-square">
     </a>
     <a href="https://arxiv.org/abs/2204.06228">
         <img src="https://img.shields.io/badge/arXiv-2204.06228-b31b1b.svg?style=flat-square">
@@ -147,7 +147,7 @@ The extended journal version is accepted by CVIU,
 
 ## License
 
-This project is under the CC-BY-NC 4.0 license. See [LICENSE](LICENSE) for details.
+This project is under the CC BY-NC 4.0 license. See [LICENSE](LICENSE) for details.
 
 ## Acknowledgements
 
