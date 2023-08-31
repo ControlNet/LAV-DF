@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you find this work useful in your research, please cite it."
+preferred-citation:
+  type: article
+  title: "Glitch in the Matrix: A Large Scale Benchmark for Content Driven Audio-Visual Forgery Detection and Localization"
+  authors:
+  - family-names: "Cai"
+    given-names: "Zhixi"
+  - family-names: "Ghosh"
+    given-names: "Shreya"
+  - family-names: "Dhall"
+    given-names: "Abhinav"
+  - family-names: "Gedeon"
+    given-names: "Tom"
+  - family-names: "Stefanov"
+    given-names: "Kalin"
+  - family-names: "Hayat"
+    given-names: "Munawar"
+  journal: "Computer Vision and Image Understanding"
+  year: 2023
+  doi: "10.1016/j.cviu.2023.103818"
