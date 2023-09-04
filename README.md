@@ -140,6 +140,8 @@ The extended journal version is accepted by CVIU,
   author = {Cai, Zhixi and Ghosh, Shreya and Dhall, Abhinav and Gedeon, Tom and Stefanov, Kalin and Hayat, Munawar},
   journal = {Computer Vision and Image Understanding},
   year = {2023},
+  volume = {236},
+  pages = {103818},
   issn = {1077-3142},
   doi = {10.1016/j.cviu.2023.103818},
 }

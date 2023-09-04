@@ -18,4 +18,6 @@ preferred-citation:
     given-names: "Munawar"
   journal: "Computer Vision and Image Understanding"
   year: 2023
+  volume: 236
+  start: 103818
   doi: "10.1016/j.cviu.2023.103818"
