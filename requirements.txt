@@ -6,6 +6,7 @@ tqdm>=4.41.1
 av>=8.0.3
 einops>=0.3.0
 pytorch_lightning==1.7.*
+torchmetrics==0.7.*
 scipy>=1.7.3
 
 pandas>=1.2.0
