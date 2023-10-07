@@ -106,7 +106,7 @@ Besides, you can also download the [BA-TFD](https://github.com/ControlNet/LAV-DF
 
 ```bash
 python evaluate.py \
-  --config ./config/default.toml \
+  --config <CONFIG_PATH> \
   --data_root <DATASET_PATH> \
   --checkpoint <CHECKPOINT_PATH>
 ```
