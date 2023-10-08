@@ -284,11 +284,7 @@ class BatfdPlus(LightningModule):
         Tensor, Optional[Tensor], Optional[Tensor],
         Tensor, Optional[Tensor], Optional[Tensor]
     ]:
-        (
-            video, audio, fusion_bm_label, fusion_start_label, fusion_end_label, n_frames,
-            v_bm_label, a_bm_label, v_frame_label, a_frame_label, contrast_label,
-            a_start_label, v_start_label, a_end_label, v_end_label
-        ) = batch
+        video, audio, *_ = batch
         # forward
         (
             fusion_bm_map_p, fusion_bm_map_c, fusion_bm_map_p_c, fusion_cbg_start, fusion_cbg_end,

@@ -140,8 +140,8 @@ class Batfd(LightningModule):
 
     def predict_step(self, batch: Tensor, batch_idx: int, dataloader_idx: Optional[int] = None
     ) -> Tuple[Tensor, Tensor, Tensor]:
-        video, audio, label, n_frames, v_bm_label, a_bm_label, v_frame_label, a_frame_label, contrast_label = batch
-        fusion_bm_map, v_bm_map, a_bm_map, v_frame_cla, a_frame_cla, v_features, a_features = self(video, audio)
+        video, audio, *_ = batch
+        fusion_bm_map, v_bm_map, a_bm_map, *_ = self(video, audio)
         return fusion_bm_map, v_bm_map, a_bm_map
 
     def configure_optimizers(self):

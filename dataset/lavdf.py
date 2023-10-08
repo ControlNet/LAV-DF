@@ -45,7 +45,8 @@ class Lavdf(Dataset):
         audio_transform: Callable[[Tensor], Tensor] = Identity(),
         metadata: Optional[List[Metadata]] = None,
         get_meta_attr: Callable[[Metadata, Tensor, Tensor, T_LABEL], List[Any]] = None,
-        require_match_scores: bool = False
+        require_match_scores: bool = False,
+        return_file_name: bool = False
     ):
         self.subset = subset
         self.root = root
@@ -56,6 +57,7 @@ class Lavdf(Dataset):
         self.audio_transform = audio_transform
         self.get_meta_attr = get_meta_attr
         self.require_match_scores = require_match_scores
+        self.return_file_name = return_file_name
 
         label_dir = os.path.join(self.root, "label")
         if not os.path.exists(label_dir):
@@ -93,10 +95,15 @@ class Lavdf(Dataset):
 
         if not self.require_match_scores:
             label = self.get_label(meta)
-            return [video, audio, label] + self.get_meta_attr(meta, video, audio, label)
+            outputs = [video, audio, label] + self.get_meta_attr(meta, video, audio, label)
         else:
             label = self.get_label_with_match_scores(meta)
-            return [video, audio, *label] + self.get_meta_attr(meta, video, audio, label)
+            outputs = [video, audio, *label] + self.get_meta_attr(meta, video, audio, label)
+
+        if self.return_file_name:
+            outputs.append(meta.file)
+
+        return outputs
 
     def get_label(self, meta: Metadata) -> Tensor:
         file_name = meta.file.split("/")[-1].split(".")[0] + ".npy"
@@ -246,7 +253,8 @@ class LavdfDataModule(LightningDataModule):
         batch_size: int = 1, num_workers: int = 0,
         take_train: int = None, take_dev: int = None, take_test: int = None,
         cond: Optional[Callable[[Metadata], bool]] = None,
-        get_meta_attr: Callable[[Metadata, Tensor, Tensor, Tensor], List[Any]] = _default_get_meta_attr
+        get_meta_attr: Callable[[Metadata, Tensor, Tensor, Tensor], List[Any]] = _default_get_meta_attr,
+        return_file_name: bool = False
     ):
         super().__init__()
         self.root = root
@@ -260,6 +268,7 @@ class LavdfDataModule(LightningDataModule):
         self.take_test = take_test
         self.cond = cond
         self.get_meta_attr = get_meta_attr
+        self.return_file_name = return_file_name
         self.Dataset = feature_type_to_dataset_type[feature_types]
 
     def setup(self, stage: Optional[str] = None) -> None:
@@ -283,15 +292,18 @@ class LavdfDataModule(LightningDataModule):
 
         self.train_dataset = self.Dataset("train", self.root, self.frame_padding, self.max_duration,
             metadata=train_metadata, get_meta_attr=self.get_meta_attr,
-            require_match_scores=self.require_match_scores
+            require_match_scores=self.require_match_scores,
+            return_file_name=self.return_file_name
         )
         self.dev_dataset = self.Dataset("dev", self.root, self.frame_padding, self.max_duration,
             metadata=dev_metadata, get_meta_attr=self.get_meta_attr,
-            require_match_scores=self.require_match_scores
+            require_match_scores=self.require_match_scores,
+            return_file_name=self.return_file_name
         )
         self.test_dataset = self.Dataset("test", self.root, self.frame_padding, self.max_duration,
             metadata=test_metadata, get_meta_attr=self.get_meta_attr,
-            require_match_scores=self.require_match_scores
+            require_match_scores=self.require_match_scores,
+            return_file_name=self.return_file_name
         )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
@@ -300,10 +312,10 @@ class LavdfDataModule(LightningDataModule):
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.dev_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(self.dev_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.test_dataset, batch_size=1, num_workers=self.num_workers)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
 
 
 # The dictionary is used to map the feature type to the dataset type

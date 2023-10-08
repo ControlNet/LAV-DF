@@ -46,7 +46,7 @@ Download link: [Google Drive](https://drive.google.com/file/d/1-OQ-NDtdEyqHNLaZU
 
 | Method  | AP@0.5 | AP@0.75 | AP@0.95 | AR@100 | AR@50 | AR@20 | AR@10 |
 |---------|--------|---------|---------|--------|-------|-------|-------|
-| BA-TFD  | 79.15  | 38.57   | 00.24   | 67.03  | 64.18 | 60.89 | 58.51 |
+| BA-TFD  | 79.16  | 38.58   | 00.25   | 67.04  | 64.19 | 60.90 | 58.52 |
 | BA-TFD+ | 96.30  | 84.96   | 04.44   | 81.62  | 80.48 | 79.40 | 78.75 |
 
 Please note this result of BA-TFD is slightly better than the one reported in the paper. 
@@ -108,7 +108,8 @@ Besides, you can also download the [BA-TFD](https://github.com/ControlNet/LAV-DF
 python evaluate.py \
   --config <CONFIG_PATH> \
   --data_root <DATASET_PATH> \
-  --checkpoint <CHECKPOINT_PATH>
+  --checkpoint <CHECKPOINT_PATH> \
+  --batch_size 1 --num_workers 4
 ```
 
 In the script, there will be a temporal inference results generated in `output` directory, and the AP and AR scores will

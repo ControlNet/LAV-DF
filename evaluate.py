@@ -14,6 +14,8 @@ parser = argparse.ArgumentParser(description="BATFD evaluation")
 parser.add_argument("--config", type=str)
 parser.add_argument("--data_root", type=str)
 parser.add_argument("--checkpoint", type=str)
+parser.add_argument("--batch_size", type=int, default=4)
+parser.add_argument("--num_workers", type=int, default=8)
 parser.add_argument("--modalities", type=str, nargs="+", default=["fusion"])
 parser.add_argument("--subset", type=str, nargs="+", default=["full"])
 parser.add_argument("--gpus", type=int, default=1)
@@ -69,8 +71,9 @@ def evaluate_lavdf(config, args):
         require_match_scores=require_match_scores,
         feature_types=(v_feature, a_feature),
         max_duration=config["max_duration"],
-        batch_size=1, num_workers=3,
-        get_meta_attr=get_meta_attr
+        batch_size=args.batch_size, num_workers=args.num_workers,
+        get_meta_attr=get_meta_attr,
+        return_file_name=True
     )
     dm.setup()
 
@@ -113,7 +116,7 @@ def evaluate_lavdf(config, args):
             iou_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
             n_proposals_list = [100, 50, 20, 10]
 
-            ar_score = AR(n_proposals_list, iou_thresholds=iou_thresholds, parallel=False)(metadata, proposals)
+            ar_score = AR(n_proposals_list, iou_thresholds=iou_thresholds)(metadata, proposals)
 
             for n_proposals in n_proposals_list:
                 print(f"AR@{n_proposals} Score for {modality} modality in {subset_name} set: "
