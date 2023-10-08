@@ -4,14 +4,17 @@ from typing import Any, List, Literal, Optional
 
 import numpy as np
 import pandas as pd
-import torch
 from pytorch_lightning import LightningModule, Trainer, Callback
 from torch import Tensor
-from torch.utils.data import DataLoader
-from tqdm.auto import tqdm
 
 from dataset import LavdfDataModule
 from dataset.lavdf import Metadata
+
+
+def nullable_index(obj, index):
+    if obj is None:
+        return None
+    return obj[index]
 
 
 class SaveToCsvCallback(Callback):
@@ -38,86 +41,82 @@ class SaveToCsvCallback(Callback):
         dataloader_idx: int,
     ) -> None:
         if self.model_type == "batfd":
-            fusion_bm_map, v_bm_map, a_bm_map = outputs.cpu().numpy()[0]
-            video_name = self.metadata[batch_idx].file
-            n_frames = batch[3][0]
-            if self.save_fusion:
-                self.gen_df_for_batfd(fusion_bm_map, n_frames, os.path.join(
-                    "output", "results", self.model_name, video_name.split('/')[-1].replace(".mp4", ".csv")
-                ))
-            if self.save_visual:
-                self.gen_df_for_batfd(v_bm_map, n_frames, os.path.join(
-                    "output", "results", f"{self.model_name}_v", video_name.split('/')[-1].replace(".mp4", ".csv")
-                ))
-            if self.save_audio:
-                self.gen_df_for_batfd(a_bm_map, n_frames, os.path.join(
-                    "output", "results", f"{self.model_name}_a", video_name.split('/')[-1].replace(".mp4", ".csv")
-                ))
+            fusion_bm_map, v_bm_map, a_bm_map = outputs
+            batch_size = fusion_bm_map.shape[0]
+
+            for i in range(batch_size):
+                n_frames = batch[3][i]
+                video_name = batch[9][i]
+                assert isinstance(video_name, str)
+                assert video_name == self.metadata[batch_idx * batch_size + i].file
+                if self.save_fusion:
+                    self.gen_df_for_batfd(fusion_bm_map[i], n_frames, os.path.join(
+                        "output", "results", self.model_name, video_name.split('/')[-1].replace(".mp4", ".csv")
+                    ))
+                if self.save_visual:
+                    self.gen_df_for_batfd(v_bm_map[i], n_frames, os.path.join(
+                        "output", "results", f"{self.model_name}_v", video_name.split('/')[-1].replace(".mp4", ".csv")
+                    ))
+                if self.save_audio:
+                    self.gen_df_for_batfd(a_bm_map[i], n_frames, os.path.join(
+                        "output", "results", f"{self.model_name}_a", video_name.split('/')[-1].replace(".mp4", ".csv")
+                    ))
         elif self.model_type == "batfd_plus":
             fusion_bm_map, fusion_start, fusion_end, v_bm_map, v_start, v_end, a_bm_map, a_start, a_end = outputs
-            video_name = self.metadata[batch_idx].file
-            n_frames = batch[5][0]
-            if self.save_fusion:
-                self.gen_df_for_batfd_plus(fusion_bm_map, fusion_start, fusion_end, n_frames, os.path.join(
-                    "output", "results", self.model_name, video_name.split('/')[-1].replace(".mp4", ".csv")
-                ))
-            if self.save_visual:
-                self.gen_df_for_batfd_plus(v_bm_map, v_start, v_end, n_frames, os.path.join(
-                    "output", "results", f"{self.model_name}_v", video_name.split('/')[-1].replace(".mp4", ".csv")
-                ))
-            if self.save_audio:
-                self.gen_df_for_batfd_plus(a_bm_map, a_start, a_end, n_frames, os.path.join(
-                    "output", "results", f"{self.model_name}_a", video_name.split('/')[-1].replace(".mp4", ".csv")
-                ))
+            batch_size = fusion_bm_map.shape[0]
+
+            for i in range(batch_size):
+                n_frames = batch[5][i]
+                video_name = batch[-1][i]
+                assert isinstance(video_name, str)
+
+                if self.save_fusion:
+                    self.gen_df_for_batfd_plus(fusion_bm_map[i], nullable_index(fusion_start, i), nullable_index(fusion_end, i), 
+                        n_frames, os.path.join("output", "results", self.model_name, video_name.split('/')[-1].replace(".mp4", ".csv")
+                    ))
+                if self.save_visual:
+                    self.gen_df_for_batfd_plus(v_bm_map[i], nullable_index(v_start, i), nullable_index(v_end, i), 
+                        n_frames, os.path.join("output", "results", f"{self.model_name}_v", video_name.split('/')[-1].replace(".mp4", ".csv")
+                    ))
+                if self.save_audio:
+                    self.gen_df_for_batfd_plus(a_bm_map[i], nullable_index(a_start, i), nullable_index(a_end, i), 
+                        n_frames, os.path.join("output", "results", f"{self.model_name}_a", video_name.split('/')[-1].replace(".mp4", ".csv")
+                    ))
+        else:
+            raise ValueError("Invalid model type")
 
     def gen_df_for_batfd(self, bm_map: Tensor, n_frames: int, output_file: str):
+        bm_map = bm_map.cpu().numpy()
+        n_frames = n_frames.cpu().item()
         # for each boundary proposal in boundary map
-        new_props = []
-        for i in range(n_frames):
-            for j in range(1, self.max_duration):
-                # begin frame and end frame
-                begin = i
-                end = i + j
-                if end <= n_frames:
-                    new_props.append([begin, end, bm_map[j, i]])
-
-        new_props = np.stack(new_props)
-        col_name = ["begin", "end", "score"]
-        new_df = pd.DataFrame(new_props, columns=col_name)
-        new_df["begin"] = new_df["begin"].astype(int)
-        new_df["end"] = new_df["end"].astype(int)
-        new_df.to_csv(output_file, index=False)
+        df = pd.DataFrame(bm_map)
+        df = df.stack().reset_index()
+        df.columns = ["duration", "begin", "score"]
+        df["end"] = df.duration + df.begin
+        df = df[(df.duration > 0) & (df.end <= n_frames)]
+        df = df.sort_values(["begin", "end"])
+        df = df.reset_index()[["begin", "end", "score"]]
+        df.to_csv(output_file, index=False)
 
     def gen_df_for_batfd_plus(self, bm_map: Tensor, start: Optional[Tensor], end: Optional[Tensor], n_frames: int,
         output_file: str
     ):
-        bm_map = bm_map.cpu().numpy()[0]
+        bm_map = bm_map.cpu().numpy()
         if start is not None and end is not None:
-            start = start.cpu().numpy()[0]
-            end = end.cpu().numpy()[0]
+            start = start.cpu().numpy()
+            end = end.cpu().numpy()
 
         # for each boundary proposal in boundary map
-        new_props = []
-        for i in range(n_frames):
-            for j in range(1, self.max_duration):
-                # begin frame and end frame
-                index_begin = i
-                index_end = i + j
-                if index_end <= n_frames:
-                    if start is not None and end is not None:
-                        start_score = start[index_begin]
-                        end_score = end[index_end]
-                        score = bm_map[j, i] * start_score * end_score
-                    else:
-                        score = bm_map[j, i]
-                    new_props.append([index_begin, index_end, score])
-
-        new_props = np.stack(new_props)
-        col_name = ["begin", "end", "score"]
-        new_df = pd.DataFrame(new_props, columns=col_name)
-        new_df["begin"] = new_df["begin"].astype(int)
-        new_df["end"] = new_df["end"].astype(int)
-        new_df.to_csv(output_file, index=False)
+        df = pd.DataFrame(bm_map)
+        df = df.stack().reset_index()
+        df.columns = ["duration", "begin", "score"]
+        df["end"] = df.duration + df.begin
+        df = df[(df.duration > 0) & (df.end <= n_frames)]
+        df = df.sort_values(["begin", "end"])
+        df = df.reset_index()[["begin", "end", "score"]]
+        if start is not None and end is not None:
+            df["score"] = df["score"] * start[df.begin] * end[df.end]
+        df.to_csv(output_file, index=False)
 
 
 def inference_batfd(model_name: str, model: LightningModule, dm: LavdfDataModule,

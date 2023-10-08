@@ -136,6 +136,40 @@ def ioa_with_anchors(anchors_min, anchors_max, box_min, box_max):
     return scores
 
 
+def iou_1d(proposal, target) -> Tensor:
+    """
+    Calculate 1D IOU for N proposals with L labels.
+
+    Args:
+        proposal (:class:`~torch.Tensor` | :class:`~numpy.ndarray`): The predicted array with [M, 2]. First column is
+            beginning, second column is end.
+        target (:class:`~torch.Tensor` | :class:`~numpy.ndarray`): The label array with [N, 2]. First column is
+            beginning, second column is end.
+
+    Returns:
+        :class:`~torch.Tensor`: The iou result with [M, N].
+    """
+    if type(proposal) is np.ndarray:
+        proposal = torch.from_numpy(proposal)
+
+    if type(target) is np.ndarray:
+        target = torch.from_numpy(target)
+
+    proposal_begin = proposal[:, 0].unsqueeze(0).T
+    proposal_end = proposal[:, 1].unsqueeze(0).T
+    target_begin = target[:, 0]
+    target_end = target[:, 1]
+
+    inner_begin = torch.maximum(proposal_begin, target_begin)
+    inner_end = torch.minimum(proposal_end, target_end)
+    outer_begin = torch.minimum(proposal_begin, target_begin)
+    outer_end = torch.maximum(proposal_end, target_end)
+
+    inter = torch.clamp(inner_end - inner_begin, min=0.)
+    union = outer_end - outer_begin
+    return inter / union
+
+
 class LrLogger(Callback):
     """Log learning rate in each epoch start."""
 

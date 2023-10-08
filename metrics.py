@@ -1,16 +1,14 @@
-from concurrent.futures import ProcessPoolExecutor
-from os import cpu_count
 from typing import List, Union
 
 import torch
 from torch import Tensor
-from torch.nn import Module
+from tqdm.auto import tqdm
 
 from dataset.lavdf import Metadata
-from utils import iou_with_anchors
+from utils import iou_1d
 
 
-class AP(Module):
+class AP:
     """
     Average Precision
 
@@ -24,13 +22,13 @@ class AP(Module):
         self.n_labels = 0
         self.ap: dict = {}
 
-    def forward(self, metadata: List[Metadata], proposals_dict: dict) -> dict:
+    def __call__(self, metadata: List[Metadata], proposals_dict: dict) -> dict:
 
         for iou_threshold in self.iou_thresholds:
             values = []
             self.n_labels = 0
 
-            for meta in metadata:
+            for meta in tqdm(metadata):
                 proposals = torch.tensor(proposals_dict[meta.file])
                 labels = torch.tensor(meta.fake_periods)
                 values.append(AP.get_values(iou_threshold, proposals, labels, 25.))
@@ -49,32 +47,20 @@ class AP(Module):
         return self.ap
 
     def calculate_curve(self, values):
-        acc_TP = 0
-        acc_FP = 0
-        curve = torch.zeros((len(values), 2))
-        for i, (confidence, is_TP) in enumerate(values):
-            if is_TP == 1:
-                acc_TP += 1
-            else:
-                acc_FP += 1
-
-            precision = acc_TP / (acc_TP + acc_FP)
-            recall = acc_TP / self.n_labels
-            curve[i] = torch.tensor((recall, precision))
-
+        is_TP = values[:, 1]
+        acc_TP = torch.cumsum(is_TP, dim=0)
+        precision = acc_TP / (torch.arange(len(is_TP)) + 1)
+        recall = acc_TP / self.n_labels
+        curve = torch.stack([recall, precision]).T
         curve = torch.cat([torch.tensor([[1., 0.]]), torch.flip(curve, dims=(0,))])
         return curve
 
-    def calculate_ap(self, curve):
-        y_max = 0.
-        ap = 0
-        for i in range(len(curve) - 1):
-            x1, y1 = curve[i]
-            x2, y2 = curve[i + 1]
-            if y1 > y_max:
-                y_max = y1
-            dx = x1 - x2
-            ap += dx * y_max
+    @staticmethod
+    def calculate_ap(curve):
+        x, y = curve.T
+        y_max = y.cummax(dim=0).values
+        x_diff = x.diff().abs()
+        ap = (x_diff * y_max[:-1]).sum()
         return ap
 
     @staticmethod
@@ -85,9 +71,11 @@ class AP(Module):
         fps: float,
     ) -> Tensor:
         n_labels = len(labels)
-        ious = torch.zeros((len(proposals), n_labels))
-        for i in range(len(labels)):
-            ious[:, i] = iou_with_anchors(proposals[:, 1] / fps, proposals[:, 2] / fps, labels[i, 0], labels[i, 1])
+        n_proposals = len(proposals)
+        if n_labels > 0:
+            ious = iou_1d(proposals[:, 1:] / fps, labels)
+        else:
+            ious = torch.zeros((n_proposals, 0))
 
         # values: (confidence, is_TP) rows
         n_labels = ious.shape[1]
@@ -95,23 +83,24 @@ class AP(Module):
         confidence = proposals[:, 0]
         potential_TP = ious > iou_threshold
 
-        for i in range(len(proposals)):
-            for j in range(n_labels):
-                if potential_TP[i, j]:
-                    if detected[j]:
-                        potential_TP[i, j] = False
-                    else:
-                        # mark as detected
-                        potential_TP[i] = False  # mark others as False
-                        potential_TP[i, j] = True  # mark the selected as True
-                        detected[j] = True
+        tp_indexes = []
 
-        is_TP = potential_TP.any(dim=1)
+        for i in range(n_labels):
+            potential_TP_index = potential_TP[:, i].nonzero()
+            for (j,) in potential_TP_index:
+                if j not in tp_indexes:
+                    tp_indexes.append(j)
+                    break
+        
+        is_TP = torch.zeros(n_proposals, dtype=torch.bool)
+        if len(tp_indexes) > 0:
+            tp_indexes = torch.stack(tp_indexes)
+            is_TP[tp_indexes] = True
         values = torch.column_stack([confidence, is_TP])
         return values
 
 
-class AR(Module):
+class AR:
     """
     Average Recall
 
@@ -121,71 +110,58 @@ class AR(Module):
 
     """
 
-    def __init__(self, n_proposals_list: Union[List[int], int] = 100, iou_thresholds: List[float] = None,
-        parallel: bool = True
-    ):
+    def __init__(self, n_proposals_list: Union[List[int], int] = 100, iou_thresholds: List[float] = None):
         super().__init__()
         if iou_thresholds is None:
             iou_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
-        self.n_proposals_list: List[int] = n_proposals_list if type(n_proposals_list) is list else [n_proposals_list]
+        self.n_proposals_list = n_proposals_list if type(n_proposals_list) is list else [n_proposals_list]
+        self.n_proposals_list = torch.tensor(self.n_proposals_list)
         self.iou_thresholds = iou_thresholds
-        self.parallel = parallel
         self.ar: dict = {}
 
-    def forward(self, metadata: List[Metadata], proposals_dict: dict) -> dict:
-        for n_proposals in self.n_proposals_list:
-            if self.parallel:
-                with ProcessPoolExecutor(cpu_count() // 2 - 1) as executor:
-                    futures = []
-                    for meta in metadata:
-                        proposals = torch.tensor(proposals_dict[meta.file])
-                        labels = torch.tensor(meta.fake_periods)
-                        futures.append(executor.submit(AR.get_values, n_proposals, self.iou_thresholds,
-                            proposals, labels, 25.))
+    def __call__(self, metadata: List[Metadata], proposals_dict: dict) -> dict:
+        # shape: (n_metadata, n_iou_thresholds, n_proposal_thresholds, 2)
+        values = torch.zeros((len(metadata), len(self.iou_thresholds), len(self.n_proposals_list), 2))
+        for i, meta in enumerate(tqdm(metadata)):
+            proposals = torch.tensor(proposals_dict[meta.file])
+            labels = torch.tensor(meta.fake_periods)
+            values[i] = self.get_values(self.iou_thresholds, proposals, labels, 25.)
 
-                    values = list(map(lambda x: x.result(), futures))
-                    values = torch.stack(values)
-            else:
-                values = torch.zeros((len(metadata), len(self.iou_thresholds), 2))
-                for i, meta in enumerate(metadata):
-                    proposals = torch.tensor(proposals_dict[meta.file])
-                    labels = torch.tensor(meta.fake_periods)
-                    values[i] = AR.get_values(n_proposals, self.iou_thresholds, proposals, labels, 25.)
+        values_sum = values.sum(dim=0)
 
-            values_sum = values.sum(dim=0)
-
-            TP = values_sum[:, 0]
-            FN = values_sum[:, 1]
-            recall = TP / (TP + FN)
-            self.ar[n_proposals] = recall.mean()
+        TP = values_sum[:, :, 0]
+        FN = values_sum[:, :, 1]
+        recall = TP / (TP + FN)  # (n_iou_thresholds, n_proposal_thresholds)
+        for i, n_proposals in enumerate(self.n_proposals_list):
+            self.ar[n_proposals.item()] = recall[:, i].mean().item()
 
         return self.ar
 
-    @staticmethod
     def get_values(
-        n_proposals: int,
+        self,
         iou_thresholds: List[float],
         proposals: Tensor,
         labels: Tensor,
         fps: float,
     ):
-        proposals = proposals[:n_proposals]
-        n_proposals = proposals.shape[0]
+        n_proposals_list = self.n_proposals_list
+        max_proposals = max(n_proposals_list)
+        
+        proposals = proposals[:max_proposals]
         n_labels = len(labels)
-        ious = torch.zeros((n_proposals, n_labels))
-        for i in range(len(labels)):
-            ious[:, i] = iou_with_anchors(proposals[:, 1] / fps, proposals[:, 2] / fps, labels[i, 0], labels[i, 1])
 
-        n_thresholds = len(iou_thresholds)
+        if n_labels > 0:
+            ious = iou_1d(proposals[:, 1:] / fps, labels)
+        else:
+            ious = torch.zeros((max_proposals, 0))
 
-        # values: rows of (TP, FN)
-        iou_max = ious.max(dim=0)[0]
-        values = torch.zeros((n_thresholds, 2))
+        # values: matrix of (TP, FN), shapes (n_iou_thresholds, n_proposal_thresholds, 2)
+        iou_max = ious.cummax(0).values[n_proposals_list - 1]  # shape (n_iou_thresholds, n_labels)
+        iou_max = iou_max[None]
 
-        for i in range(n_thresholds):
-            iou_threshold = iou_thresholds[i]
-            TP = (iou_max > iou_threshold).sum()
-            FN = n_labels - TP
-            values[i] = torch.tensor((TP, FN))
+        iou_thresholds = torch.tensor(iou_thresholds)[:, None, None]
+        TP = (iou_max > iou_thresholds).sum(-1)
+        FN = n_labels - TP
+        values = torch.stack([TP, FN], dim=-1)
 
         return values
