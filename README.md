@@ -102,7 +102,7 @@ The checkpoint will be saved in `ckpt` directory, and the tensorboard log will b
 
 Please run the following command to evaluate the model with the checkpoint saved in `ckpt` directory.
 
-Besides, you can also download the [BA-TFD](https://github.com/ControlNet/LAV-DF/releases/download/pretrained_model/baftd_default.ckpt) and [BA-TFD+](https://github.com/ControlNet/LAV-DF/releases/download/pretrained_model_v2/baftd_plus_default.ckpt) pretrained models.
+Besides, you can also download the [BA-TFD](https://github.com/ControlNet/LAV-DF/releases/download/pretrained_model/batfd_default.ckpt) and [BA-TFD+](https://github.com/ControlNet/LAV-DF/releases/download/pretrained_model_v2/batfd_plus_default.ckpt) pretrained models.
 
 ```bash
 python evaluate.py \
