@@ -102,6 +102,7 @@ class SaveToCsvCallback(Callback):
         output_file: str
     ):
         bm_map = bm_map.cpu().numpy()
+        n_frames = n_frames.cpu().item()
         if start is not None and end is not None:
             start = start.cpu().numpy()
             end = end.cpu().numpy()
