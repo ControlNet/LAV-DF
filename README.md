@@ -40,7 +40,7 @@ Forgery Detection and Localization](https://www.sciencedirect.com/science/articl
 
 To use this LAV-DF dataset, you should agree the [terms and conditions](https://github.com/ControlNet/LAV-DF/blob/master/TERMS_AND_CONDITIONS.md).
 
-Download link: [Google Drive](https://drive.google.com/file/d/1-OQ-NDtdEyqHNLaZU1Lt9Upk5wVqfYJw/view?usp=sharing), [HuggingFace](https://huggingface.co/datasets/ControlNet/LAV-DF).
+Download link: [OneDrive](https://monashuni-my.sharepoint.com/:f:/g/personal/zhixi_cai_monash_edu/Ehedb0j6AltNtdaI1ABlcl8BvPHgSnUm6SRFDgygEKTqYg?e=pIWD7h), [Google Drive](https://drive.google.com/drive/folders/1U8asIMb0bpH6-zMR_5FaJmPnC53lomq7?usp=sharing), [HuggingFace](https://huggingface.co/datasets/ControlNet/LAV-DF).
 
 ### Baseline Benchmark
 
@@ -117,6 +117,10 @@ be printed in the console.
 
 Note please make sure only one GPU is visible to the evaluation script.
 
+## License
+
+This project is under the CC BY-NC 4.0 license. See [LICENSE](LICENSE) for details.
+
 ## References
 
 If you find this work useful in your research, please cite them.
@@ -147,10 +151,6 @@ The extended journal version is accepted by CVIU,
   doi = {10.1016/j.cviu.2023.103818},
 }
 ```
-
-## License
-
-This project is under the CC BY-NC 4.0 license. See [LICENSE](LICENSE) for details.
 
 ## Acknowledgements
 
