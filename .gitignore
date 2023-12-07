@@ -366,3 +366,5 @@ $RECYCLE.BIN/
 /output
 /lightning_logs
 /ckpt
+*.ckpt
+*.pth
