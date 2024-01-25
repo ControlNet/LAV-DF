@@ -1,11 +1,12 @@
 import json
 import re
+from abc import ABC
 from typing import List, Tuple, Optional
 
 import numpy as np
 import torch
-import torchvision
 import torchaudio
+import torchvision
 from einops import rearrange
 from pytorch_lightning import Callback, Trainer, LightningModule
 from torch import Tensor
@@ -84,33 +85,37 @@ def resize_video(tensor: Tensor, size: Tuple[int, int], resize_method: str = "bi
     return F.interpolate(tensor, size=size, mode=resize_method)
 
 
-def _get_Conv(PtConv):
-    class _ConvNd(Module):
+class _ConvNd(Module, ABC):
 
-        def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, padding: int = 0,
-            build_activation: Optional[callable] = None
-        ):
-            super().__init__()
-            self.conv = PtConv(
-                in_channels, out_channels, kernel_size, stride=stride, padding=padding
-            )
-            if build_activation is not None:
-                self.activation = build_activation()
-            else:
-                self.activation = None
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, padding: int = 0,
+        build_activation: Optional[callable] = None
+    ):
+        super().__init__()
+        self.conv = self.PtConv(
+            in_channels, out_channels, kernel_size, stride=stride, padding=padding
+        )
+        if build_activation is not None:
+            self.activation = build_activation()
+        else:
+            self.activation = None
 
-        def forward(self, x: Tensor) -> Tensor:
-            x = self.conv(x)
-            if self.activation is not None:
-                x = self.activation(x)
-            return x
-
-    return _ConvNd
+    def forward(self, x: Tensor) -> Tensor:
+        x = self.conv(x)
+        if self.activation is not None:
+            x = self.activation(x)
+        return x
 
 
-Conv1d = _get_Conv(torch.nn.Conv1d)
-Conv2d = _get_Conv(torch.nn.Conv2d)
-Conv3d = _get_Conv(torch.nn.Conv3d)
+class Conv1d(_ConvNd):
+    PtConv = torch.nn.Conv1d
+
+
+class Conv2d(_ConvNd):
+    PtConv = torch.nn.Conv2d
+
+
+class Conv3d(_ConvNd):
+    PtConv = torch.nn.Conv3d
 
 
 def iou_with_anchors(anchors_min, anchors_max, box_min, box_max):
