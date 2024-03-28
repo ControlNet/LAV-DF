@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import toml
 import torch
@@ -8,7 +9,7 @@ from inference import inference_batfd
 from metrics import AP, AR
 from model import Batfd, BatfdPlus
 from post_process import post_process
-from utils import read_json
+from utils import generate_metadata_min, read_json
 
 parser = argparse.ArgumentParser(description="BATFD evaluation")
 parser.add_argument("--config", type=str)
@@ -125,6 +126,10 @@ def evaluate_lavdf(config, args):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    
+    if os.path.exists(os.path.join(args.data_root, "metadata.min.json")):
+        generate_metadata_min(args.data_root)
+
     config = toml.load(args.config)
     torch.backends.cudnn.benchmark = True
     if config["dataset"] == "lavdf":

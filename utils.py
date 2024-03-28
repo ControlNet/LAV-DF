@@ -1,4 +1,6 @@
+from importlib import metadata
 import json
+import os
 import re
 from abc import ABC
 from typing import List, Tuple, Optional
@@ -219,3 +221,12 @@ class EarlyStoppingLR(Callback):
         elif self.mode == "any":
             if any(lr <= self.lr_threshold for lr in all_lr):
                 trainer.should_stop = True
+
+
+def generate_metadata_min(data_root: str):
+    metadata_full = read_json(os.path.join(data_root, "metadata.json"))
+    metadata_min = []
+    for meta in metadata_full:
+        del meta["timestamps"]
+    with open(os.path.join(data_root, "metadata.min.json"), "w") as f:
+        json.dump(metadata_min, f)

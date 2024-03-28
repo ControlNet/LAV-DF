@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import toml
 from pytorch_lightning import Trainer
@@ -6,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from dataset.lavdf import LavdfDataModule
 from model import Batfd, BatfdPlus
-from utils import LrLogger, EarlyStoppingLR
+from utils import LrLogger, EarlyStoppingLR, generate_metadata_min
 
 parser = argparse.ArgumentParser(description="BATFD training")
 parser.add_argument("--config", type=str)
@@ -23,6 +24,9 @@ parser.add_argument("--resume", type=str, default=None)
 if __name__ == '__main__':
     args = parser.parse_args()
     config = toml.load(args.config)
+
+    if os.path.exists(os.path.join(args.data_root, "metadata.min.json")):
+        generate_metadata_min(args.data_root)
 
     learning_rate = config["optimizer"]["learning_rate"]
     gpus = args.gpus
