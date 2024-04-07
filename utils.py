@@ -228,6 +228,7 @@ def generate_metadata_min(data_root: str):
     metadata_min = []
     for meta in metadata_full:
         del meta["timestamps"]
+        del meta["transcript"]
         metadata_min.append(meta)
     with open(os.path.join(data_root, "metadata.min.json"), "w") as f:
         json.dump(metadata_min, f)

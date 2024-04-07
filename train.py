@@ -25,7 +25,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     config = toml.load(args.config)
 
-    if os.path.exists(os.path.join(args.data_root, "metadata.min.json")):
+    if not os.path.exists(os.path.join(args.data_root, "metadata.min.json")):
         generate_metadata_min(args.data_root)
 
     learning_rate = config["optimizer"]["learning_rate"]
