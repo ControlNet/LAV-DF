@@ -40,7 +40,7 @@ Forgery Detection and Localization](https://www.sciencedirect.com/science/articl
 
 To use this LAV-DF dataset, you should agree the [terms and conditions](https://github.com/ControlNet/LAV-DF/blob/master/TERMS_AND_CONDITIONS.md).
 
-Download link: [OneDrive](https://monashuni-my.sharepoint.com/:f:/g/personal/zhixi_cai_monash_edu/Ehedb0j6AltNtdaI1ABlcl8BvPHgSnUm6SRFDgygEKTqYg?e=pIWD7h), [Google Drive](https://drive.google.com/drive/folders/1U8asIMb0bpH6-zMR_5FaJmPnC53lomq7?usp=sharing), [HuggingFace](https://huggingface.co/datasets/ControlNet/LAV-DF).
+Download link: [OneDrive](https://monashuni-my.sharepoint.com/:f:/g/personal/zhixi_cai_monash_edu/EklD-8lD_GRNl0yyJJ-cF3kBWEiHRmH4U5Dtg7eJjAOUlg?e=wowDpd), [Google Drive](https://drive.google.com/drive/folders/1U8asIMb0bpH6-zMR_5FaJmPnC53lomq7?usp=sharing), [HuggingFace](https://huggingface.co/datasets/ControlNet/LAV-DF).
 
 ### Baseline Benchmark
 
