@@ -24,6 +24,12 @@
     <a href="https://arxiv.org/abs/2305.01979">
         <img src="https://img.shields.io/badge/arXiv-2305.01979-b31b1b.svg?style=flat-square">
     </a>
+    <a href="https://huggingface.co/datasets/ControlNet/LAV-DF">
+        <img src="https://img.shields.io/badge/huggingface-dataset-FFD21E?style=flat-square&logo=huggingface">
+    </a>
+    <a href="https://huggingface.co/ControlNet/LAV-DF">
+        <img src="https://img.shields.io/badge/huggingface-model-FFD21E?style=flat-square&logo=huggingface">
+    </a>
     <a href="https://paperswithcode.com/sota/temporal-forgery-localization-on-lav-df?p=glitch-in-the-matrix-a-large-scale-benchmark">
         <img src="https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/glitch-in-the-matrix-a-large-scale-benchmark/temporal-forgery-localization-on-lav-df&style=flat-square">
     </a>
